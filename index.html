@@ -282,8 +282,8 @@
   /* ---------- Carte ---------- */
   const map = L.map('map', {scrollWheelZoom:false, tap:true}).setView([49.6, -1.5], 9);
   // Alban : la molette reste libre sur la page tant qu'on n'interagit pas avec la carte.
-  map.on('focus click', () => map.scrollWheelZoom.enable());
-  map.on('blur mouseout', () => map.scrollWheelZoom.disable());
+  map.on('mouseover', () => map.scrollWheelZoom.enable());
+map.on('mouseout', () => map.scrollWheelZoom.disable());
 
   const osmAttr = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
   const cartoAttr = osmAttr + ' | &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>';
