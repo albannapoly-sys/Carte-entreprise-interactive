@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Politique de tuiles OSMF : ne pas empêcher l'envoi du Referer vers tile.openstreetmap.org -->
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>Entreprises partenaires — Maintenance</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  /* ===== Charte du site lycee-tocqueville.fr (thème Icelander + kit Elementor) =====
+     Police Fira Sans · bleu #213A8F (bandeau, liens) · orange #FF874B (famille Industrie)
+     titres #242323 · texte #6F6E6E · fond #FDFCFC · angles droits */
+  :root{
+    --brand:#213A8F; --brand-hover:#2B4AAE; --brand-soft:#EDF0F8;
+    --accent:#FF874B; --accent-text:#A3461A; --accent-soft:#FFF0E8;
+    --bg:#FDFCFC; --surface:#FFFFFF; --surface-2:#F4F3F3;
+    --line:#E4E3E3; --line-strong:#C4C3C3; --ink:#242323; --text:#545353; --muted:#6F6E6E;
+    --r:2px;
+    --map-h:600px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg)}
+  body{font-family:"Fira Sans","Helvetica Neue",Arial,sans-serif;color:var(--text);line-height:1.62;font-size:15px;-webkit-font-smoothing:antialiased}
+  button,input,select{font:inherit;color:inherit}
+  :focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+  a{color:var(--brand)}
+
+  .wrap{max-width:1140px;margin:0 auto;padding:16px 0}
+
+  /* ===== En-tête du bloc (même style que les h2 de la page) ===== */
+  .intro{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 32px;margin-bottom:18px}
+  .eyebrow{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-text);margin-bottom:4px}
+  .eyebrow::before{content:"";width:10px;height:10px;background:var(--accent)}
+  h2.title{font-size:1.62rem;line-height:1.38;font-weight:700;color:var(--ink)}
+  .lead{margin-top:4px;color:var(--muted);max-width:60ch}
+
+  .stats{display:flex}
+  .stat{padding:0 20px;border-left:1px solid var(--line-strong)}
+  .stat:first-child{padding-left:0;border-left:0}
+  .stat b{display:block;font-size:2rem;line-height:1.1;font-weight:700;color:var(--brand)}
+  .stat span{font-size:.75rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+
+  /* ===== Barre de filtres ===== */
+  .toolbar{display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:12px;align-items:end;background:var(--surface-2);border-top:3px solid var(--brand);padding:14px 16px 16px;margin-bottom:16px}
+  .field label{display:block;font-size:.75rem;font-weight:500;letter-spacing:.05em;text-transform:uppercase;color:var(--text);margin-bottom:4px}
+  .field input,.field select{width:100%;height:44px;padding:0 12px;border:1px solid var(--line-strong);border-radius:var(--r);background:#fff;color:var(--ink);appearance:none;-webkit-appearance:none}
+  .field select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23545353' stroke-width='2'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:34px}
+  .field input:focus,.field select:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 2px rgba(33,58,143,.18)}
+  .search{position:relative}
+  .search svg{position:absolute;left:12px;bottom:14px;color:var(--muted);pointer-events:none}
+  .search input{padding-left:38px}
+  .btn-reset{height:44px;padding:0 18px;border:1px solid var(--brand);background:transparent;border-radius:var(--r);cursor:pointer;font-weight:500;font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;color:var(--brand);white-space:nowrap}
+  .btn-reset:hover{background:var(--brand);color:#fff}
+
+  /* ===== Bascule Carte / Liste (mobile) ===== */
+  .switch{display:none;border:1px solid var(--brand);border-radius:var(--r);margin-bottom:12px;overflow:hidden}
+  .switch button{flex:1;height:44px;border:0;background:#fff;font-weight:500;font-size:.85rem;letter-spacing:.06em;text-transform:uppercase;color:var(--brand);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
+  .switch button[aria-pressed="true"]{background:var(--brand);color:#fff}
+
+  /* ===== Zone principale ===== */
+  .main{display:grid;grid-template-columns:330px 1fr;gap:16px;height:var(--map-h)}
+  .panel{display:flex;flex-direction:column;min-height:0;border:1px solid var(--line);background:var(--surface)}
+  .panel-head{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 14px;background:var(--brand);color:#fff;font-size:.78rem;letter-spacing:.06em;text-transform:uppercase}
+  .panel-head strong{font-weight:700}
+  .panel-head .hint{opacity:.8;text-transform:none;letter-spacing:0}
+  .list{list-style:none;overflow-y:auto;flex:1;scrollbar-width:thin}
+  .list li+li{border-top:1px solid var(--line)}
+  .card{width:100%;text-align:left;background:transparent;border:0;border-left:4px solid transparent;padding:12px 14px 12px 10px;cursor:pointer;display:grid;grid-template-columns:34px 1fr;gap:12px;align-items:start;transition:background .15s}
+  .card:hover{background:var(--surface-2)}
+  .card.active{background:var(--brand-soft);border-left-color:var(--accent)}
+  .card .pin{width:34px;height:34px;background:var(--brand-soft);color:var(--brand);display:grid;place-items:center;font-weight:700;font-size:.78rem}
+  .card.active .pin{background:var(--brand);color:#fff}
+  .card .name{display:block;font-size:.98rem;font-weight:700;line-height:1.3;color:var(--ink);margin-bottom:2px}
+  .card .addr{display:block;font-size:.84rem;line-height:1.45;color:var(--muted)}
+  .card .chip{display:table}
+  .chip{display:inline-block;margin-top:6px;background:var(--accent-soft);color:var(--accent-text);font-size:.7rem;font-weight:500;letter-spacing:.05em;text-transform:uppercase;padding:2px 8px}
+  .card .nogeo{display:block;font-size:.75rem;color:var(--muted);margin-top:4px;font-style:italic}
+  .empty{text-align:center;padding:48px 16px;color:var(--muted)}
+
+  .map-box{position:relative;border:1px solid var(--line);min-height:0}
+  #map{position:absolute;inset:0;background:var(--surface-2)}
+
+  /* Marqueurs : bleu du site, orange pour la sélection */
+  .mk{width:26px;height:26px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--brand);border:3px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.35)}
+  .mk.on{background:var(--accent)}
+  .leaflet-div-icon{background:none;border:0}
+
+  /* Regroupements : pastille bleue + nombre ; un clic zoome et éclate le groupe */
+  .cl{display:grid;place-items:center;width:100%;height:100%;border-radius:50%;background:var(--brand);color:#fff;font-weight:700;font-size:14px;border:3px solid #fff;box-shadow:0 0 0 6px rgba(33,58,143,.25),0 2px 6px rgba(0,0,0,.3);transition:transform .15s}
+  .cl.m{font-size:15px}.cl.l{font-size:17px}
+  .leaflet-marker-icon:hover .cl{transform:scale(1.08)}
+
+  /* Popup */
+  .leaflet-container{font-family:"Fira Sans","Helvetica Neue",Arial,sans-serif}
+  .leaflet-popup-content-wrapper{border-radius:var(--r);border-top:3px solid var(--brand);box-shadow:0 6px 20px rgba(0,0,0,.2)}
+  .leaflet-popup-content{margin:12px 16px 14px;min-width:220px}
+  .pop h3{font-size:1.02rem;font-weight:700;color:var(--ink);margin-bottom:6px;line-height:1.3}
+  .pop p{margin:0 0 2px;font-size:.86rem;color:var(--text)}
+  .pop .chip{margin:6px 0 10px}
+  .pop a.go{display:inline-flex;align-items:center;gap:6px;background:var(--brand);color:#fff;text-decoration:none;font-weight:500;font-size:.75rem;letter-spacing:.06em;text-transform:uppercase;padding:8px 14px;border-radius:var(--r)}
+  .pop a.go:hover{background:var(--brand-hover)}
+
+  /* Intégré dans le site (iframe) : la colonne du site gère déjà les marges */
+  html.embedded,html.embedded body{background:transparent}
+  html.embedded .wrap{padding-left:0!important;padding-right:0!important;padding-top:0}
+  .foot{margin-top:10px;font-size:.78rem;color:var(--muted)}
+
+  /* ===== Fenêtre de chargement (secours) ===== */
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:16px;z-index:2000}
+  .modal.active{display:flex}
+  .modal-card{background:#fff;border-top:4px solid var(--brand);max-width:480px;width:100%;padding:28px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+  .modal-card h2{color:var(--ink);font-size:1.3rem;margin-bottom:10px}
+  .modal-card p{color:var(--text);font-size:.9rem;margin-bottom:18px}
+  .btn{display:inline-flex;align-items:center;gap:8px;height:46px;padding:0 22px;border:0;border-radius:var(--r);background:var(--brand);color:#fff;font-weight:500;letter-spacing:.06em;text-transform:uppercase;font-size:.85rem;cursor:pointer}
+  .btn:hover{background:var(--brand-hover)}
+  .modal-card .tip{margin-top:18px;margin-bottom:0;background:var(--surface-2);padding:12px;font-size:.8rem;text-align:left}
+
+  /* ===== Tablette ===== */
+  @media (max-width:1024px){
+    .wrap{padding:16px}
+    .toolbar{grid-template-columns:1fr 1fr}
+    .toolbar .search{grid-column:1 / -1}
+    .btn-reset{grid-column:1 / -1}
+    .main{grid-template-columns:280px 1fr}
+  }
+  /* ===== Téléphone (point de rupture Elementor : 767px) ===== */
+  @media (max-width:767px){
+    .wrap{padding:12px 16px}
+    h2.title{font-size:1.4rem}
+    .stats{width:100%}
+    .stat b{font-size:1.6rem}
+    .toolbar{padding:12px;gap:10px}
+    .switch{display:flex}
+    .main{display:block;height:auto}
+    .panel .list{overflow:visible}
+    .panel-head .hint{display:none}
+    .map-box{height:460px}
+    .main[data-view="map"] .panel{display:none}
+    .main[data-view="list"] .map-box{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="intro">
+    <div>
+      <div class="eyebrow">Bac Pro MSPC · Maintenance</div>
+      <h2 class="title">Nos entreprises partenaires</h2>
+      <p class="lead">Repérez les entreprises qui accueillent nos élèves et apprentis en stage (PFMP) ou en alternance.</p>
+    </div>
+    <div class="stats" aria-live="polite">
+      <div class="stat"><b id="total-entreprises">0</b><span>entreprises</span></div>
+      <div class="stat"><b id="total-villes">0</b><span>communes</span></div>
+    </div>
+  </header>
+
+  <form class="toolbar" role="search" onsubmit="return false">
+    <div class="field search">
+      <label for="search">Rechercher</label>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input type="search" id="search" placeholder="Nom, commune, rue…" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="ville-filter">Commune</label>
+      <select id="ville-filter"><option value="">Toutes</option></select>
+    </div>
+    <div class="field">
+      <label for="type-filter">Secteur</label>
+      <select id="type-filter"><option value="">Tous</option></select>
+    </div>
+    <button type="button" class="btn-reset" id="reset">Réinitialiser</button>
+  </form>
+
+  <div class="switch" role="group" aria-label="Affichage">
+    <button type="button" id="view-map" aria-pressed="true">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></svg>Carte
+    </button>
+    <button type="button" id="view-list" aria-pressed="false">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Liste
+    </button>
+  </div>
+
+  <div class="main" id="main" data-view="map">
+    <section class="panel" aria-label="Liste des entreprises">
+      <div class="panel-head"><span><strong id="count">0</strong> résultat(s)</span><span class="hint">Cliquez une fiche pour la situer</span></div>
+      <ul class="list" id="company-list"></ul>
+    </section>
+    <div class="map-box"><div id="map" role="region" aria-label="Carte des entreprises"></div></div>
+  </div>
+
+  <p class="foot">Lycée Alexis de Tocqueville · 34 avenue Henri Poincaré, 50100 Cherbourg-en-Cotentin</p>
+</div>
+
+<div id="uploadModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal-card">
+    <h2 id="modal-title">Charger les données</h2>
+    <p>Sélectionnez le fichier <strong>entreprises.json</strong>.</p>
+    <input type="file" id="fileInput" accept=".json" hidden>
+    <button class="btn" type="button" onclick="document.getElementById('fileInput').click()">Choisir un fichier</button>
+    <p class="tip"><strong>Astuce :</strong> ouvert en double-clic (file://), le navigateur bloque le chargement automatique. Placez <code>entreprises.json</code> à côté de cette page sur le serveur, ou testez avec <code>python -m http.server</code>.</p>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.min.js"></script>
+<script>
+  /* Mode intégré : retire les marges et envoie la hauteur réelle à la page WordPress
+     (le petit script à coller dans le bloc HTML ajuste alors l'iframe automatiquement). */
+  (function(){
+    if (window.self === window.top) return;
+    document.documentElement.classList.add('embedded');
+    const send = () => parent.postMessage({type:'carte-entreprises-height', height:Math.ceil(document.querySelector('.wrap').getBoundingClientRect().height) + 8}, '*');
+    window.addEventListener('load', send);
+    document.addEventListener('DOMContentLoaded', () => {
+      const wrap = document.querySelector('.wrap');
+      if (wrap && typeof ResizeObserver !== 'undefined') new ResizeObserver(send).observe(wrap);
+    });
+  })();
+  let entreprisesData = [];
+  let filteredData = [];
+  let listenersReady = false;
+  let activeId = null;
+  const CARTO_KEY = "cb1_4th9_1_62496286a153fecb254ffde8";
+  const $ = id => document.getElementById(id);
+  const isMobile = () => window.matchMedia('(max-width:767px)').matches;
+
+  /* ---------- Données ---------- */
+  function parseCompanies(content) {
+    const parsed = JSON.parse(content);
+    if (!Array.isArray(parsed)) throw new Error('Format de données invalide');
+    const ids = new Set();
+    return parsed.map((entry, index) => {
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry)) throw new Error('Fiche invalide : ' + (index + 1));
+      const item = {...entry};
+      for (const f of ['nom','ville','voie','type_entreprise','code_postal']) item[f] = String(item[f] ?? '');
+      item.id_entreprise = String(item.id_entreprise ?? index + 1);
+      if (ids.has(item.id_entreprise)) throw new Error('Identifiant en double : ' + item.id_entreprise);
+      ids.add(item.id_entreprise);
+      item.numero = String(item.numero ?? '');
+      item.lat = item.lat === '' || item.lat == null ? null : Number(item.lat);
+      item.lon = item.lon === '' || item.lon == null ? null : Number(item.lon);
+      if (!Number.isFinite(item.lat) || !Number.isFinite(item.lon) || Math.abs(item.lat) > 90 || Math.abs(item.lon) > 180) { item.lat = null; item.lon = null; }
+      return item;
+    }).sort((a,b) => a.nom.localeCompare(b.nom, 'fr'));
+  }
+  const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const hasGeo = e => Number.isFinite(e.lat) && Number.isFinite(e.lon)
+    && Math.abs(e.lat) <= 90 && Math.abs(e.lon) <= 180;
+  const initials = n => n.replace(/[^A-Za-zÀ-ÿ0-9 ]/g,' ').trim().split(/\s+/).slice(0,2).map(w => w[0]).join('').toUpperCase() || '•';
+
+  // Alban : le même traitement sert au JSON du site et au fichier chargé à la main.
+  function applyData(data) { entreprisesData = data; $('uploadModal').classList.remove('active'); initMap(); }
+
+  async function loadData() {
+    if (location.protocol === 'file:') { $('uploadModal').classList.add('active'); return; }
+    try {
+      const r = await fetch('./entreprises.json', {cache:'no-cache'});
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      applyData(parseCompanies(await r.text()));
+    } catch (err) {
+      console.error('Chargement des entreprises impossible :', err);
+      $('uploadModal').classList.add('active');
+    }
+  }
+  $('fileInput').addEventListener('change', e => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try { applyData(parseCompanies(ev.target.result)); }
+      catch (err) { console.error(err); alert('Impossible de lire les données. Vérifiez le format JSON.'); }
+    };
+    reader.onerror = () => alert('Lecture du fichier impossible.');
+    reader.readAsText(file, 'UTF-8');
+  });
+
+  /* ---------- Carte ---------- */
+  const map = L.map('map', {scrollWheelZoom:false, tap:true}).setView([49.6, -1.5], 9);
+  // Alban : la molette reste libre sur la page tant qu'on n'interagit pas avec la carte.
+  map.on('focus click', () => map.scrollWheelZoom.enable());
+  map.on('blur mouseout', () => map.scrollWheelZoom.disable());
+
+  const osmAttr = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
+  const cartoAttr = osmAttr + ' | &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>';
+  const cartoUrl = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png?key=' + encodeURIComponent(CARTO_KEY);
+  const cartoLayer = () => L.tileLayer(cartoUrl, {attribution:cartoAttr, maxZoom:19, subdomains:'abcd'});
+
+  let baseLayer;
+  if (location.protocol === 'file:') {
+    baseLayer = cartoLayer().addTo(map);
+  } else {
+    baseLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution:osmAttr, maxZoom:19}).addTo(map);
+    let errors = 0, switched = false;
+    baseLayer.on('tileerror', () => {
+      if (switched || ++errors < 5) return;
+      switched = true; map.removeLayer(baseLayer); cartoLayer().addTo(map);
+    });
+  }
+
+  const icon = on => L.divIcon({className:'', html:`<div class="mk${on?' on':''}"></div>`, iconSize:[28,28], iconAnchor:[14,28], popupAnchor:[0,-26]});
+  const markers = {};
+
+  function popupHtml(e) {
+    const adr = [e.numero, e.voie].filter(Boolean).join(' ');
+    const dest = encodeURIComponent(hasGeo(e) ? `${e.lat},${e.lon}` : `${adr} ${e.code_postal} ${e.ville}`);
+    return `<div class="pop">
+      <h3>${esc(e.nom)}</h3>
+      ${adr ? `<p>${esc(adr)}</p>` : ''}
+      <p>${esc(e.code_postal)} ${esc(e.ville)}</p>
+      ${e.type_entreprise ? `<span class="chip">${esc(e.type_entreprise)}</span><br>` : ''}
+      <a class="go" href="https://www.google.com/maps/dir/?api=1&destination=${dest}" target="_blank" rel="noopener">Itinéraire</a>
+    </div>`;
+  }
+
+  /* Groupe de marqueurs : regroupement (clusters) si la bibliothèque est chargée, sinon marqueurs simples */
+  const hasCluster = typeof L.markerClusterGroup === 'function';
+  const group = hasCluster
+    ? L.markerClusterGroup({
+        showCoverageOnHover:false,        // pas de polygone gris au survol
+        spiderfyOnMaxZoom:true,           // entreprises à la même adresse : écartées en étoile
+        disableClusteringAtZoom:16,       // au plus près, chaque entreprise est visible
+        maxClusterRadius:55,
+        iconCreateFunction: c => {
+          const n = c.getChildCount();
+          const size = n < 10 ? 40 : n < 50 ? 48 : 56;
+          const cls = n < 10 ? '' : n < 50 ? ' m' : ' l';
+          return L.divIcon({html:`<div class="cl${cls}">${n}</div>`, className:'', iconSize:[size,size]});
+        }
+      })
+    : L.featureGroup();
+  group.addTo(map);
+
+  function addMarkers(list) {
+    group.clearLayers();
+    Object.keys(markers).forEach(k => delete markers[k]);
+    const pts = [];
+    list.filter(hasGeo).forEach(e => {
+      const m = L.marker([e.lat, e.lon], {icon:icon(false), title:e.nom, alt:e.nom}).bindPopup(popupHtml(e));
+      group.addLayer(m);
+      m.on('click', () => select(e.id_entreprise, false));
+      markers[e.id_entreprise] = m;
+      pts.push([e.lat, e.lon]);
+    });
+    if (pts.length) map.fitBounds(L.latLngBounds(pts), {padding:[40,40], maxZoom:14});
+  }
+
+  /* ---------- Liste ---------- */
+  function displayCompanies(list) {
+    const ul = $('company-list');
+    ul.innerHTML = '';
+    $('count').textContent = list.length;
+    if (!list.length) { ul.innerHTML = '<li class="empty">Aucune entreprise ne correspond à ces critères.</li>'; return; }
+    list.forEach(e => {
+      const li = document.createElement('li');
+      const adr = [e.numero, e.voie].filter(Boolean).join(' ');
+      li.innerHTML = `<button type="button" class="card" data-id="${esc(e.id_entreprise)}">
+          <span class="pin" aria-hidden="true">${esc(initials(e.nom))}</span>
+          <span>
+            <strong class="name">${esc(e.nom)}</strong>
+            <span class="addr">${adr ? esc(adr) + ' · ' : ''}${esc(e.ville)}</span>
+            ${e.type_entreprise ? `<span class="chip">${esc(e.type_entreprise)}</span>` : ''}
+            ${hasGeo(e) ? '' : '<span class="nogeo">Position non renseignée</span>'}
+          </span>
+        </button>`;
+      li.firstElementChild.addEventListener('click', () => select(e.id_entreprise, true));
+      ul.appendChild(li);
+    });
+  }
+
+  function select(id, fromList) {
+    if (activeId && markers[activeId]) markers[activeId].setIcon(icon(false));
+    activeId = id;
+    document.querySelectorAll('.card').forEach(c => c.classList.toggle('active', c.dataset.id === String(id)));
+    const e = entreprisesData.find(x => x.id_entreprise === String(id));
+    const m = markers[id];
+    if (m) m.setIcon(icon(true));
+    if (fromList) {
+      if (!m) return;
+      const show = () => {
+        if (hasCluster) group.zoomToShowLayer(m, () => {
+          map.setView([e.lat, e.lon], Math.max(map.getZoom(), 15));
+          m.openPopup();
+        });
+        else { map.setView([e.lat, e.lon], 15); m.openPopup(); }
+      };
+      if (isMobile() && $('main').dataset.view !== 'map') { setView('map'); setTimeout(show, 120); }
+      else show();
+    } else {
+      const card = [...document.querySelectorAll('.card')].find(c => c.dataset.id === String(id));
+      if (card && !isMobile()) card.scrollIntoView({behavior:'smooth', block:'nearest'});
+    }
+  }
+
+  /* ---------- Filtres ---------- */
+  function fillSelect(sel, values, allLabel) {
+    sel.innerHTML = `<option value="">${allLabel}</option>`;
+    values.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = v; sel.appendChild(o); });
+  }
+  function populateFilters(list) {
+    const uniq = k => [...new Set(list.map(e => e[k]).filter(Boolean))].sort((a,b) => a.localeCompare(b,'fr'));
+    fillSelect($('ville-filter'), uniq('ville'), 'Toutes');
+    fillSelect($('type-filter'), uniq('type_entreprise'), 'Tous');
+  }
+  function updateStats(list) {
+    $('total-entreprises').textContent = list.length;
+    $('total-villes').textContent = new Set(list.map(e => e.ville).filter(Boolean)).size;
+  }
+  function norm(s) { return s.toLocaleLowerCase('fr').normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+  function filterCompanies() {
+    const v = $('ville-filter').value, t = $('type-filter').value, q = norm($('search').value.trim());
+    filteredData = entreprisesData.filter(e =>
+      (!v || e.ville === v) && (!t || e.type_entreprise === t) &&
+      (!q || norm(e.nom).includes(q) || norm(e.ville).includes(q) || norm(e.voie).includes(q)));
+    activeId = null;
+    addMarkers(filteredData); displayCompanies(filteredData); updateStats(filteredData);
+  }
+
+  /* ---------- Bascule mobile ---------- */
+  function setView(view) {
+    $('main').dataset.view = view;
+    $('view-map').setAttribute('aria-pressed', view === 'map');
+    $('view-list').setAttribute('aria-pressed', view === 'list');
+    if (view === 'map') setTimeout(() => map.invalidateSize(), 50);
+  }
+  $('view-map').addEventListener('click', () => setView('map'));
+  $('view-list').addEventListener('click', () => setView('list'));
+  window.addEventListener('resize', () => map.invalidateSize());
+
+  // Alban : les filtres sont reconstruits au rechargement, pas leurs événements.
+  function initMap() {
+    populateFilters(entreprisesData);
+    filterCompanies();
+    if (listenersReady) return;
+    listenersReady = true;
+    $('ville-filter').addEventListener('change', filterCompanies);
+    $('type-filter').addEventListener('change', filterCompanies);
+    $('search').addEventListener('input', filterCompanies);
+    $('reset').addEventListener('click', () => { $('ville-filter').value = ''; $('type-filter').value = ''; $('search').value = ''; filterCompanies(); });
+  }
+
+  loadData();
+</script>
+</body>
+</html>
