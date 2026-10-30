@@ -230,8 +230,34 @@
   const isMobile = () => window.matchMedia('(max-width:767px)').matches;
 
   /* ---------- Données ---------- */
+   // Clé et fonctions de décryptage XOR + Base64
+  const SECRET_KEY = "LyceeTocqueville2025SecureKey";
+
+  function xorEncryptDecrypt(input, key) {
+    let output = "";
+    for (let i = 0; i < input.length; i++) {
+        let charCode = input.charCodeAt(i) ^ key.charCodeAt(i % key.length);
+        output += String.fromCharCode(charCode);
+    }
+    return output;
+  }
+
+  function decrypt(encoded) {
+    let decodedXor = decodeURIComponent(escape(atob(encoded.trim())));
+    return xorEncryptDecrypt(decodedXor, SECRET_KEY);
+  }
+
   function parseCompanies(content) {
-    const parsed = JSON.parse(content);
+    // 1. Décryptage du contenu chiffré avant l'analyse JSON
+    let textToParse = content;
+    try {
+      textToParse = decrypt(content);
+    } catch (decryptError) {
+      console.warn("Échec du décryptage initial, tentative de lecture en texte brut...");
+    }
+
+    // 2. Traitement JSON standard
+    const parsed = JSON.parse(textToParse);
     if (!Array.isArray(parsed)) throw new Error('Format de données invalide');
     const ids = new Set();
     return parsed.map((entry, index) => {
@@ -248,6 +274,7 @@
       return item;
     }).sort((a,b) => a.nom.localeCompare(b.nom, 'fr'));
   }
+
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const hasGeo = e => Number.isFinite(e.lat) && Number.isFinite(e.lon)
     && Math.abs(e.lat) <= 90 && Math.abs(e.lon) <= 180;
@@ -267,23 +294,25 @@
       $('uploadModal').classList.add('active');
     }
   }
+
   $('fileInput').addEventListener('change', e => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = ev => {
       try { applyData(parseCompanies(ev.target.result)); }
-      catch (err) { console.error(err); alert('Impossible de lire les données. Vérifiez le format JSON.'); }
+      catch (err) { console.error(err); alert('Impossible de lire les données. Vérifiez le format ou la clé de décryptage.'); }
     };
     reader.onerror = () => alert('Lecture du fichier impossible.');
     reader.readAsText(file, 'UTF-8');
   });
 
+
   /* ---------- Carte ---------- */
   const map = L.map('map', {scrollWheelZoom:false, tap:true}).setView([49.6, -1.5], 9);
   // Alban : la molette reste libre sur la page tant qu'on n'interagit pas avec la carte.
   map.on('mouseover', () => map.scrollWheelZoom.enable());
-map.on('mouseout', () => map.scrollWheelZoom.disable());
+  map.on('mouseout', () => map.scrollWheelZoom.disable());
 
   const osmAttr = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
   const cartoAttr = osmAttr + ' | &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>';
