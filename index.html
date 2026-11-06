@@ -446,9 +446,9 @@
   }
   function norm(s) { return s.toLocaleLowerCase('fr').normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
   function filterCompanies() {
-    const v = $('ville-filter').value, t = $('type-filter').value, q = norm($('search').value.trim());
-    filteredData = entreprisesData.filter(e =>
-      (!v || e.ville === v) && (!t || e.type_entreprise === t) &&
+    const d = $('domaine-filter').value, v = $('ville-filter').value, t = $('type-filter').value, q = norm($('search').value.trim());
+       filteredData = entreprisesData.filter(e =>
+      (!d || e.domaine === d) && (!v || e.ville === v) && (!t || e.type_entreprise === t) &&
       (!q || norm(e.nom).includes(q) || norm(e.ville).includes(q) || norm(e.voie).includes(q)));
     activeId = null;
     addMarkers(filteredData); displayCompanies(filteredData); updateStats(filteredData);
